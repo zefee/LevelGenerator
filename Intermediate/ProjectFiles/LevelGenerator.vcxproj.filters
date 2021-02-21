@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="..\..\LevelGenerator.uproject" />
+    <Filter Include="Source">
+      <UniqueIdentifier>{64601C99-93AF-4CA2-B162-B737A5634806}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\LevelGenerator.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="..\..\Source\LevelGeneratorEditor.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <Filter Include="Config">
+      <UniqueIdentifier>{8682F8D3-DC0D-4FEB-B59B-07376436446D}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Config\DefaultEditor.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultEngine.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultGame.ini">
+      <Filter>Config</Filter>
+    </None>
+    <Filter Include="Source\LevelGenerator">
+      <UniqueIdentifier>{5AEED4E1-93E6-46F4-B565-12F4B8873BD2}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\LevelGenerator\LevelGenerator.Build.cs">
+      <Filter>Source\LevelGenerator</Filter>
+    </None>
+    <ClCompile Include="..\..\Source\LevelGenerator\LevelGenerator.cpp">
+      <Filter>Source\LevelGenerator</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\LevelGenerator\LevelGenerator.h">
+      <Filter>Source\LevelGenerator</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\LevelGenerator\MarchingVolume.cpp">
+      <Filter>Source\LevelGenerator</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\LevelGenerator\MarchingVolume.h">
+      <Filter>Source\LevelGenerator</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\LevelGenerator\MeshGeneration.cpp">
+      <Filter>Source\LevelGenerator</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\LevelGenerator\MeshGeneration.h">
+      <Filter>Source\LevelGenerator</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

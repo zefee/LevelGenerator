@@ -1,0 +1,2 @@
+D:\UEProjects\LevelGenerator\Intermediate\Build\Win64\UE4Editor\Development\LevelGenerator\Definitions.LevelGenerator.h
+D:\UEProjects\LevelGenerator\Source\LevelGenerator\LevelGenerator.h

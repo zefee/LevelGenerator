@@ -1,0 +1,14 @@
+{
+	"Targets": [
+		{
+			"Name": "LevelGenerator",
+			"Path": "D:\\UEProjects\\LevelGenerator\\Source\\LevelGenerator.Target.cs",
+			"Type": "Game"
+		},
+		{
+			"Name": "LevelGeneratorEditor",
+			"Path": "D:\\UEProjects\\LevelGenerator\\Source\\LevelGeneratorEditor.Target.cs",
+			"Type": "Editor"
+		}
+	]
+}

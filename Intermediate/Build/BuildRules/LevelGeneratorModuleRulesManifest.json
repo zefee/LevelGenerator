@@ -1,0 +1,8 @@
+{
+	"SourceFiles": [
+		"D:\\UEProjects\\LevelGenerator\\Source\\LevelGenerator\\LevelGenerator.Build.cs",
+		"D:\\UEProjects\\LevelGenerator\\Source\\LevelGenerator.Target.cs",
+		"D:\\UEProjects\\LevelGenerator\\Source\\LevelGeneratorEditor.Target.cs"
+	],
+	"EngineVersion": "4.26.1"
+}
