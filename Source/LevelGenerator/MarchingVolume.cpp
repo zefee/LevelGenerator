@@ -84,9 +84,17 @@ void AMarchingVolume::Generate()
 
 				int edgeTableValue = edgeTable[edgeTableIndex];
 
+				FVector DefinedShape[3];
+
+				FVector TriPoints = FVector(x, y, z);
+
+				DefinedShape[0] = FVector(TriPoints.X, TriPoints.Y, TriPoints.Z);
+				DefinedShape[1] = FVector(TriPoints.X, TriPoints.Y, -TriPoints.Z);
+				DefinedShape[2] = FVector(TriPoints.X, -TriPoints.Y, -TriPoints.Z);
+
 				if (edgeTableValue > 0)
 				{
-					
+					triGenerator->GenerateMesh(DefinedShape[0], DefinedShape[1], DefinedShape[2], edgeTableValue, FProcMeshTangent(0.0f, 1.0f, 0.0f));
 				}
 			}
 		}

@@ -2,34 +2,40 @@
 
 AMeshGeneration::AMeshGeneration()
 {
-	ThisMesh = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("GeneratedMesh"));
+	//ThisMesh = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("GeneratedMesh"));
 }
 
 
 void AMeshGeneration::PostActorCreated()
 {
 	Super::PostActorCreated();
-	GenerateMesh();
+//	GenerateMesh();
 }
 
 void AMeshGeneration::PostLoad()
 {
 	Super::PostLoad();
-	GenerateMesh();
+//	GenerateMesh();
 }
 
-void AMeshGeneration::GenerateMesh()
+void AMeshGeneration::GenerateMesh(FVector First, FVector Second, FVector Third, int32 TriIndexCount, FProcMeshTangent TangSetup)
 {
-	Vertices.Reset();
+	/*Vertices.Reset();
 	Triangles.Reset();
 	Normals.Reset();
 	Tangents.Reset();
 	UVs.Reset();
 	Colours.Reset();
-
+	*/
 	int32 TriangleIndexCount = 0;
 	FVector DefinedShape[3];
 	FProcMeshTangent TangentSetup;
+
+	TangentSetup = FProcMeshTangent(0.0f, 1.0f, 0.0f);
+
+	AddTriangle(First, Second, Third, TriIndexCount, TangSetup);
+
+	ThisMesh->CreateMeshSection_LinearColor(0, Vertices, Triangles, Normals, UVs, Colours, Tangents, true);
 }
 
 
@@ -49,11 +55,11 @@ void AMeshGeneration::AddTriangle(FVector TopLeft, FVector BottomLeft, FVector B
 
 	
 
-	FVector ThisNorm = FVector::CrossProduct(TopLeft, BottomRight).GetSafeNormal();
+	//FVector ThisNorm = FIntVector::CrossProduct(TopLeft, BottomRight).GetSafeNormal();
 
 	for (int i = 0; i < 3; i++)
 	{
-		Normals.Add(ThisNorm);
+		//Normals.Add(ThisNorm);
 		Tangents.Add(Tangent);
 		Colours.Add(FLinearColor::Green);
 	}

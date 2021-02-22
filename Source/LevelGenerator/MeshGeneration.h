@@ -15,17 +15,15 @@ class LEVELGENERATOR_API AMeshGeneration : public AActor
 public:	
 	// Sets default values for this actor's properties
 	AMeshGeneration();
-	
 
 protected:
-	UProceduralMeshComponent* ThisMesh;
-
+	
 	virtual void PostActorCreated() override;
 	virtual void PostLoad() override;
 
-	void GenerateMesh();
-
 public:	
+
+	UProceduralMeshComponent* ThisMesh;
 
 	TArray<FVector>Vertices;
 	TArray<int32>Triangles;
@@ -34,6 +32,8 @@ public:
 	TArray<FVector2D>UVs;
 	TArray<FLinearColor>Colours;
 
+	void GenerateMesh(FVector First, FVector Second, FVector Third, int32 TriIndexCount, FProcMeshTangent TangSetup);
+	
 	void AddTriangle(FVector TopLeft, FVector BottomLeft, FVector BottomRight, int32& TriIndex, FProcMeshTangent Tangent);
 
 };

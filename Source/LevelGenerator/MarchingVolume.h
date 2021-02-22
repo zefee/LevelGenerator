@@ -15,7 +15,8 @@ public:
 	AMarchingVolume();
 
 	float data[100 * 100 * 100];
-	AMeshGeneration triGenerator;
+	
+	AMeshGeneration* triGenerator;
 
 protected:
 	// Called when the game starts or when spawned
