@@ -2,31 +2,31 @@
 
 AMeshGeneration::AMeshGeneration()
 {
-	//ThisMesh = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("GeneratedMesh"));
+	ThisMesh = CreateDefaultSubobject<UProceduralMeshComponent>("GeneratedMesh");
 }
 
 
 void AMeshGeneration::PostActorCreated()
 {
 	Super::PostActorCreated();
-//	GenerateMesh();
+	//GenerateMesh();
 }
 
 void AMeshGeneration::PostLoad()
 {
 	Super::PostLoad();
-//	GenerateMesh();
+	//GenerateMesh();
 }
 
 void AMeshGeneration::GenerateMesh(FVector First, FVector Second, FVector Third, int32 TriIndexCount, FProcMeshTangent TangSetup)
 {
-	/*Vertices.Reset();
+	Vertices.Reset();
 	Triangles.Reset();
 	Normals.Reset();
 	Tangents.Reset();
 	UVs.Reset();
 	Colours.Reset();
-	*/
+	
 	int32 TriangleIndexCount = 0;
 	FVector DefinedShape[3];
 	FProcMeshTangent TangentSetup;

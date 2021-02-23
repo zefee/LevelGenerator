@@ -23,6 +23,7 @@ protected:
 
 public:	
 
+	UPROPERTY(VisibleAnywhere)
 	UProceduralMeshComponent* ThisMesh;
 
 	TArray<FVector>Vertices;

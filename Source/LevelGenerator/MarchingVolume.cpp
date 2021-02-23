@@ -9,7 +9,20 @@ AMarchingVolume::AMarchingVolume()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	triGenerator = CreateDefaultSubobject<AMeshGeneration>("GeneratedMesh");
 
+}
+
+void AMarchingVolume::PostActorCreated()
+{
+	Super::PostActorCreated();
+	//Generate();
+}
+
+void AMarchingVolume::PostLoad()
+{
+	Super::PostLoad();
+	//Generate();
 }
 
 // Called when the game starts or when spawned
@@ -40,7 +53,6 @@ void AMarchingVolume::BeginPlay()
 void AMarchingVolume::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 void AMarchingVolume::Generate() 
