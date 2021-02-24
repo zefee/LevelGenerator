@@ -8,32 +8,22 @@ extern int edgeTable[256];
 AMarchingVolume::AMarchingVolume()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-	triGenerator = CreateDefaultSubobject<AMeshGeneration>("GeneratedMesh");
+	PrimaryActorTick.bCanEverTick = false;
 
 }
 
-void AMarchingVolume::PostActorCreated()
-{
-	Super::PostActorCreated();
-	//Generate();
-}
 
-void AMarchingVolume::PostLoad()
-{
-	Super::PostLoad();
-	//Generate();
-}
+
 
 // Called when the game starts or when spawned
 void AMarchingVolume::BeginPlay()
 {
 	Super::BeginPlay();
+		
 	for (int x = 0; x < 100; x += 2) {
 		for (int y = 0; y < 100; y += 2) {
 			for (int z = 0; z < 100; z += 2) {
 				data[x * 100 * 100 + y * 100 + z] = 0;
-
 			}
 		}
 	}
@@ -41,7 +31,7 @@ void AMarchingVolume::BeginPlay()
 	data[354] = 1;
 	data[12354] = 1;
 	data[35456] = 1;
-	data[35444] = 1;
+	data[35444] = 1; 
 	data[50] = 1;
 
 
@@ -49,17 +39,15 @@ void AMarchingVolume::BeginPlay()
 
 }
 
-// Called every frame
-void AMarchingVolume::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
 
 void AMarchingVolume::Generate() 
 {
-	for(int x = 0; x < 100; x+=2 ){
-		for (int y = 0; y < 100; y += 2) {
-			for (int z = 0; z < 100; z += 2) {
+	for(int x = 0; x < 100; x+=2 )
+	{
+		for (int y = 0; y < 100; y += 2) 
+		{
+			for (int z = 0; z < 100; z += 2) 
+			{
 				int edgeTableIndex = 0;
 				if (data[x * 100 * 100 + y * 100 + z] > 0.5) 
 				{
@@ -99,14 +87,15 @@ void AMarchingVolume::Generate()
 				FVector DefinedShape[3];
 
 				FVector TriPoints = FVector(x, y, z);
-
+				
 				DefinedShape[0] = FVector(TriPoints.X, TriPoints.Y, TriPoints.Z);
 				DefinedShape[1] = FVector(TriPoints.X, TriPoints.Y, -TriPoints.Z);
 				DefinedShape[2] = FVector(TriPoints.X, -TriPoints.Y, -TriPoints.Z);
 
 				if (edgeTableValue > 0)
 				{
-					triGenerator->GenerateMesh(DefinedShape[0], DefinedShape[1], DefinedShape[2], edgeTableValue, FProcMeshTangent(0.0f, 1.0f, 0.0f));
+					triGenerator = GetWorld()->SpawnActor<AMeshGeneration>(FVector::ZeroVector, FRotator::ZeroRotator);
+					triGenerator->GenerateMesh(DefinedShape[0], DefinedShape[1], DefinedShape[2], 0, FProcMeshTangent(0.0f, 1.0f, 0.0f));
 				}
 			}
 		}

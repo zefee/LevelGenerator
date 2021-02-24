@@ -16,12 +16,15 @@ public:
 	// Sets default values for this actor's properties
 	AMeshGeneration();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh parameters")
+	FVector CubeRadius = FVector(100.f, 100.f, 100.f);
+
 protected:
 	
-	virtual void PostActorCreated() override;
-	virtual void PostLoad() override;
-
 public:	
+
+	UPROPERTY(VisibleAnywhere)
+	USceneComponent* ThisScene;
 
 	UPROPERTY(VisibleAnywhere)
 	UProceduralMeshComponent* ThisMesh;

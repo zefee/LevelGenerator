@@ -2,21 +2,13 @@
 
 AMeshGeneration::AMeshGeneration()
 {
+	ThisScene = CreateDefaultSubobject<USceneComponent>("Scene");
+	RootComponent = ThisScene;
 	ThisMesh = CreateDefaultSubobject<UProceduralMeshComponent>("GeneratedMesh");
+	ThisMesh->SetupAttachment(RootComponent);
 }
 
 
-void AMeshGeneration::PostActorCreated()
-{
-	Super::PostActorCreated();
-	//GenerateMesh();
-}
-
-void AMeshGeneration::PostLoad()
-{
-	Super::PostLoad();
-	//GenerateMesh();
-}
 
 void AMeshGeneration::GenerateMesh(FVector First, FVector Second, FVector Third, int32 TriIndexCount, FProcMeshTangent TangSetup)
 {
@@ -26,7 +18,7 @@ void AMeshGeneration::GenerateMesh(FVector First, FVector Second, FVector Third,
 	Tangents.Reset();
 	UVs.Reset();
 	Colours.Reset();
-	
+
 	int32 TriangleIndexCount = 0;
 	FVector DefinedShape[3];
 	FProcMeshTangent TangentSetup;
@@ -53,9 +45,9 @@ void AMeshGeneration::AddTriangle(FVector TopLeft, FVector BottomLeft, FVector B
 	Triangles.Add(Point2);
 	Triangles.Add(Point3);
 
-	
 
-	//FVector ThisNorm = FIntVector::CrossProduct(TopLeft, BottomRight).GetSafeNormal();
+
+	FVector ThisNorm = FVector::CrossProduct(TopLeft, BottomRight).GetSafeNormal();
 
 	for (int i = 0; i < 3; i++)
 	{
@@ -67,4 +59,3 @@ void AMeshGeneration::AddTriangle(FVector TopLeft, FVector BottomLeft, FVector B
 	UVs.Add(FVector2D(0.0f, 0.0f)); //Bottom Left
 	UVs.Add(FVector2D(1.0f, 0.0f)); //Bottom Right
 }
-

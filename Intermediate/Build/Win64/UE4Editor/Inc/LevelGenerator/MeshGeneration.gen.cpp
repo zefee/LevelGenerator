@@ -17,6 +17,8 @@ void EmptyLinkFunctionForGeneratedCodeMeshGeneration() {}
 	LEVELGENERATOR_API UClass* Z_Construct_UClass_AMeshGeneration();
 	ENGINE_API UClass* Z_Construct_UClass_AActor();
 	UPackage* Z_Construct_UPackage__Script_LevelGenerator();
+	COREUOBJECT_API UScriptStruct* Z_Construct_UScriptStruct_FVector();
+	ENGINE_API UClass* Z_Construct_UClass_USceneComponent_NoRegister();
 	PROCEDURALMESHCOMPONENT_API UClass* Z_Construct_UClass_UProceduralMeshComponent_NoRegister();
 // End Cross Module References
 	void AMeshGeneration::StaticRegisterNativesAMeshGeneration()
@@ -32,6 +34,14 @@ void EmptyLinkFunctionForGeneratedCodeMeshGeneration() {}
 #if WITH_METADATA
 		static const UE4CodeGen_Private::FMetaDataPairParam Class_MetaDataParams[];
 #endif
+#if WITH_METADATA
+		static const UE4CodeGen_Private::FMetaDataPairParam NewProp_CubeRadius_MetaData[];
+#endif
+		static const UE4CodeGen_Private::FStructPropertyParams NewProp_CubeRadius;
+#if WITH_METADATA
+		static const UE4CodeGen_Private::FMetaDataPairParam NewProp_ThisScene_MetaData[];
+#endif
+		static const UE4CodeGen_Private::FObjectPropertyParams NewProp_ThisScene;
 #if WITH_METADATA
 		static const UE4CodeGen_Private::FMetaDataPairParam NewProp_ThisMesh_MetaData[];
 #endif
@@ -51,6 +61,21 @@ void EmptyLinkFunctionForGeneratedCodeMeshGeneration() {}
 	};
 #endif
 #if WITH_METADATA
+	const UE4CodeGen_Private::FMetaDataPairParam Z_Construct_UClass_AMeshGeneration_Statics::NewProp_CubeRadius_MetaData[] = {
+		{ "Category", "Mesh parameters" },
+		{ "ModuleRelativePath", "MeshGeneration.h" },
+	};
+#endif
+	const UE4CodeGen_Private::FStructPropertyParams Z_Construct_UClass_AMeshGeneration_Statics::NewProp_CubeRadius = { "CubeRadius", nullptr, (EPropertyFlags)0x0010000000000005, UE4CodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, 1, STRUCT_OFFSET(AMeshGeneration, CubeRadius), Z_Construct_UScriptStruct_FVector, METADATA_PARAMS(Z_Construct_UClass_AMeshGeneration_Statics::NewProp_CubeRadius_MetaData, UE_ARRAY_COUNT(Z_Construct_UClass_AMeshGeneration_Statics::NewProp_CubeRadius_MetaData)) };
+#if WITH_METADATA
+	const UE4CodeGen_Private::FMetaDataPairParam Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisScene_MetaData[] = {
+		{ "Category", "MeshGeneration" },
+		{ "EditInline", "true" },
+		{ "ModuleRelativePath", "MeshGeneration.h" },
+	};
+#endif
+	const UE4CodeGen_Private::FObjectPropertyParams Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisScene = { "ThisScene", nullptr, (EPropertyFlags)0x00100000000a0009, UE4CodeGen_Private::EPropertyGenFlags::Object, RF_Public|RF_Transient|RF_MarkAsNative, 1, STRUCT_OFFSET(AMeshGeneration, ThisScene), Z_Construct_UClass_USceneComponent_NoRegister, METADATA_PARAMS(Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisScene_MetaData, UE_ARRAY_COUNT(Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisScene_MetaData)) };
+#if WITH_METADATA
 	const UE4CodeGen_Private::FMetaDataPairParam Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisMesh_MetaData[] = {
 		{ "Category", "MeshGeneration" },
 		{ "EditInline", "true" },
@@ -59,6 +84,8 @@ void EmptyLinkFunctionForGeneratedCodeMeshGeneration() {}
 #endif
 	const UE4CodeGen_Private::FObjectPropertyParams Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisMesh = { "ThisMesh", nullptr, (EPropertyFlags)0x00100000000a0009, UE4CodeGen_Private::EPropertyGenFlags::Object, RF_Public|RF_Transient|RF_MarkAsNative, 1, STRUCT_OFFSET(AMeshGeneration, ThisMesh), Z_Construct_UClass_UProceduralMeshComponent_NoRegister, METADATA_PARAMS(Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisMesh_MetaData, UE_ARRAY_COUNT(Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisMesh_MetaData)) };
 	const UE4CodeGen_Private::FPropertyParamsBase* const Z_Construct_UClass_AMeshGeneration_Statics::PropPointers[] = {
+		(const UE4CodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AMeshGeneration_Statics::NewProp_CubeRadius,
+		(const UE4CodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisScene,
 		(const UE4CodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AMeshGeneration_Statics::NewProp_ThisMesh,
 	};
 	const FCppClassTypeInfoStatic Z_Construct_UClass_AMeshGeneration_Statics::StaticCppClassTypeInfo = {
@@ -88,7 +115,7 @@ void EmptyLinkFunctionForGeneratedCodeMeshGeneration() {}
 		}
 		return OuterClass;
 	}
-	IMPLEMENT_CLASS(AMeshGeneration, 2961671355);
+	IMPLEMENT_CLASS(AMeshGeneration, 852875636);
 	template<> LEVELGENERATOR_API UClass* StaticClass<AMeshGeneration>()
 	{
 		return AMeshGeneration::StaticClass();
