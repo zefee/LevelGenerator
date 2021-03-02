@@ -1,6 +1,5 @@
 #include "MarchingVolume.h"
 
-
 extern int triTable[256][16];
 extern int edgeTable[256];
 
@@ -12,90 +11,117 @@ AMarchingVolume::AMarchingVolume()
 
 }
 
-
-
-
 // Called when the game starts or when spawned
 void AMarchingVolume::BeginPlay()
 {
 	Super::BeginPlay();
 		
-	for (int x = 0; x < 100; x += 2) {
-		for (int y = 0; y < 100; y += 2) {
-			for (int z = 0; z < 100; z += 2) {
+	for (int x = 0; x < cubeSize; x += 2) {
+		for (int y = 0; y < cubeSize; y += 2) {
+			for (int z = 0; z < cubeSize; z += 2) {
 				data[x * 100 * 100 + y * 100 + z] = 0;
+				volume[x][y][z] = 0;
 			}
 		}
 	}
 	
-	data[354] = 1;
-	data[12354] = 1;
-	data[35456] = 1;
-	data[35444] = 1; 
-	data[50] = 1;
-
+	volume[9][50][30] = 1;
+	volume[21][1][40] = 1;
+	volume[5][20][67] = 1;
 
 	Generate();
 
 }
 
 
+float AMarchingVolume::interpolateVerts(float iso, float vert1[3], float vert2[3], float scalar1, float scalar2)
+{
+	double mu;
+	FVector p;
+
+	if (abs(iso - vert1[1,2,3]) < 0.00001)
+		return(scalar1);
+	if (abs(iso - vert2[1, 2, 3]) < 0.00001)
+		return(scalar2);
+	if (abs(vert1[1, 2, 3] - vert2[1, 2, 3]) < 0.00001)
+		return(scalar1);
+	mu = (iso - vert1[1, 2, 3]) / (vert2[1, 2, 3] - vert1[1, 2, 3]);
+	p.X = scalar1.x + mu * (scalar2.x - scalar1.x);
+	p.Y = scalar1.y + mu * (scalar2.y - scalar1.y);
+	p.Z = scalar1.z + mu * (scalar2.z - scalar1.z);
+
+	return(p);
+}
+
+
 void AMarchingVolume::Generate() 
 {
-	for(int x = 0; x < 100; x+=2 )
+
+	triGenerator = GetWorld()->SpawnActor<AMeshGeneration>(FVector::ZeroVector, FRotator::ZeroRotator);
+
+	for(int x = 0; x < cubeSize; x+=2 )
 	{
-		for (int y = 0; y < 100; y += 2) 
+		for (int y = 0; y < cubeSize; y += 2)
 		{
-			for (int z = 0; z < 100; z += 2) 
+			for (int z = 0; z < cubeSize; z += 2)
 			{
+				float cubeCorners[8][3] = 
+				{
+					{ volume[x] [y] [z]             },
+					{ volume[x + 1] [y] [z]         },
+					{ volume[x + 1] [y] [z + 1]     },
+					{ volume[x] [y] [z + 1]         },
+					{ volume[x] [y + 1] [z]         },
+					{ volume[x + 1] [y + 1] [z]     },
+					{ volume[x + 1] [y + 1] [z + 1] },
+					{ volume[x] [y + 1] [z + 1]     }
+				};
+
 				int edgeTableIndex = 0;
-				if (data[x * 100 * 100 + y * 100 + z] > 0.5) 
+				
+				if (cubeCorners[0][0, 1, 2] < isoLevel)
 				{
 					edgeTableIndex |= 1;
 				}
-				if (data[(x + 1) * 100 * 100 + y * 100 + z] > 0.5)
+				if (cubeCorners[1][0, 1, 2] < isoLevel)
 				{
 					edgeTableIndex |= 2;
 				}
-				if (data[x * 100 * 100 + (y + 1) * 100 + z] > 0.5)
+				if (cubeCorners[2][0, 1, 2] < isoLevel)
 				{
 					edgeTableIndex |= 4;
 				}
-				if (data[x * 100 * 100 + y * 100 + (z + 1)] > 0.5)
+				if (cubeCorners[3][0, 1, 2] < isoLevel)
 				{
 					edgeTableIndex |= 8;
 				}
-				if (data[(x + 1) * 100 * 100 + (y + 1) * 100 + z] > 0.5)
+				if (cubeCorners[4][0, 1, 2] < isoLevel)
 				{
 					edgeTableIndex |= 16;
 				}
-				if (data[(x + 1) * 100 * 100 + y * 100 + (z + 1)] > 0.5)
+				if (cubeCorners[5][0, 1, 2] < isoLevel)
 				{
-					edgeTableIndex |= 32;
+					edgeTableIndex |= 31;
 				}
-				if (data[x * 100 * 100 + (y + 1) * 100 + (z + 1)] > 0.5)
+				if (cubeCorners[6][0, 1, 2] < isoLevel)
 				{
 					edgeTableIndex |= 64;
 				}
-				if (data[(x + 1) * 100 * 100 + (y + 1) * 100 + (z + 1)] > 0.5)
+				if (cubeCorners[7][0, 1, 2] < isoLevel)
 				{
 					edgeTableIndex |= 128;
 				}
 
-				int edgeTableValue = edgeTable[edgeTableIndex];
+				int vertList[12];
+				int scalarPoint[8][3];
 
-				FVector DefinedShape[3];
-
-				FVector TriPoints = FVector(x, y, z);
-				
-				DefinedShape[0] = FVector(TriPoints.X, TriPoints.Y, TriPoints.Z);
-				DefinedShape[1] = FVector(TriPoints.X, TriPoints.Y, -TriPoints.Z);
-				DefinedShape[2] = FVector(TriPoints.X, -TriPoints.Y, -TriPoints.Z);
-
-				if (edgeTableValue > 0)
+				if (edgeTable[edgeTableIndex] == 0) 
 				{
-					triGenerator = GetWorld()->SpawnActor<AMeshGeneration>(FVector::ZeroVector, FRotator::ZeroRotator);
-					triGenerator->GenerateMesh(DefinedShape[0], DefinedShape[1], DefinedShape[2], 0, FProcMeshTangent(0.0f, 1.0f, 0.0f));
+					return;
+				}
+				if (edgeTable[edgeTableIndex] & 1)
+				{
+					vertList[0] = interpolateVerts(isoLevel, cubeCorners[0][0, 1, 2], cubeCorners[1][0, 1, 2], scalarPoint[0][0,1,2], scalarPoint[1][0,1,2]);
 				}
 			}
 		}

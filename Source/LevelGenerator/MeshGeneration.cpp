@@ -51,7 +51,7 @@ void AMeshGeneration::AddTriangle(FVector TopLeft, FVector BottomLeft, FVector B
 
 	for (int i = 0; i < 3; i++)
 	{
-		//Normals.Add(ThisNorm);
+		Normals.Add(ThisNorm);
 		Tangents.Add(Tangent);
 		Colours.Add(FLinearColor::Green);
 	}
