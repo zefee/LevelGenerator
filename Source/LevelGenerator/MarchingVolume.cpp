@@ -15,42 +15,49 @@ AMarchingVolume::AMarchingVolume()
 void AMarchingVolume::BeginPlay()
 {
 	Super::BeginPlay();
-		
-	for (int x = 0; x < cubeSize; x += 2) {
-		for (int y = 0; y < cubeSize; y += 2) {
-			for (int z = 0; z < cubeSize; z += 2) {
-				data[x * 100 * 100 + y * 100 + z] = 0;
-				volume[x][y][z] = 0;
-			}
-		}
-	}
-	
-	volume[9][50][30] = 1;
-	volume[21][1][40] = 1;
-	volume[5][20][67] = 1;
+
+	GenerateVoxelVolume();
 
 	Generate();
 
 }
 
+void AMarchingVolume::GenerateVoxelVolume()
+{
+	voxelVolume.Reset();
 
-float AMarchingVolume::interpolateVerts(float iso, float vert1[3], float vert2[3], float scalar1, float scalar2)
+	for (int x = 0; x < cubeSize; x ++) {
+		for (int y = 0; y < cubeSize; y ++) {
+			for (int z = 0; z < cubeSize; z ++) {
+				voxelVolume.Add(FVector(x * volumeScale, y * volumeScale, z * volumeScale));
+			}
+		}
+	}
+
+	for (FVector vec : voxelVolume)
+	{
+		DrawDebugSphere(GetWorld(), vec, 2, 3, FColor(255, 0, 0), true, 999, 0, 0.5f);
+	}
+}
+
+
+FVector AMarchingVolume::interpolateVerts(float iso, FVector vert1, FVector vert2)
 {
 	double mu;
-	FVector p;
+	FVector VertPosition;
 
-	if (abs(iso - vert1[1,2,3]) < 0.00001)
-		return(scalar1);
-	if (abs(iso - vert2[1, 2, 3]) < 0.00001)
-		return(scalar2);
-	if (abs(vert1[1, 2, 3] - vert2[1, 2, 3]) < 0.00001)
-		return(scalar1);
-	mu = (iso - vert1[1, 2, 3]) / (vert2[1, 2, 3] - vert1[1, 2, 3]);
-	p.X = scalar1.x + mu * (scalar2.x - scalar1.x);
-	p.Y = scalar1.y + mu * (scalar2.y - scalar1.y);
-	p.Z = scalar1.z + mu * (scalar2.z - scalar1.z);
+	if (abs(iso - vert1.Size()) < 0.00001)
+		return(vert1);
+	if (abs(iso - vert2.Size()) < 0.00001)
+		return(vert2);
+	if (abs(vert1.Size() - vert2.Size()) < 0.00001)
+		return(vert1);
+	mu = (iso - vert1.Size()) / (vert2.Size() - vert1.Size());
+	VertPosition.X = vert1.X + mu * (vert2.X - vert1.X);
+	VertPosition.Y = vert1.Y + mu * (vert2.Y - vert1.Y);
+	VertPosition.Z = vert1.Z + mu * (vert2.Z - vert1.Z);
 
-	return(p);
+	return(VertPosition);
 }
 
 
@@ -59,61 +66,82 @@ void AMarchingVolume::Generate()
 
 	triGenerator = GetWorld()->SpawnActor<AMeshGeneration>(FVector::ZeroVector, FRotator::ZeroRotator);
 
-	for(int x = 0; x < cubeSize; x+=2 )
+	for(int x = 0; x < cubeSize; x += 2)
 	{
 		for (int y = 0; y < cubeSize; y += 2)
 		{
 			for (int z = 0; z < cubeSize; z += 2)
 			{
-				float cubeCorners[8][3] = 
-				{
-					{ volume[x] [y] [z]             },
-					{ volume[x + 1] [y] [z]         },
-					{ volume[x + 1] [y] [z + 1]     },
-					{ volume[x] [y] [z + 1]         },
-					{ volume[x] [y + 1] [z]         },
-					{ volume[x + 1] [y + 1] [z]     },
-					{ volume[x + 1] [y + 1] [z + 1] },
-					{ volume[x] [y + 1] [z + 1]     }
-				};
+
+				cubeCorn[0].X = voxelVolume[x].X;				
+				cubeCorn[0].Y = voxelVolume[y].Y;
+				cubeCorn[0].Z = voxelVolume[z].Z;
+
+				cubeCorn[1].X = voxelVolume[x].X + 1;
+				cubeCorn[1].Y = voxelVolume[y].Y;
+				cubeCorn[1].Z = voxelVolume[z].Z;
+
+				cubeCorn[2].X = voxelVolume[x].X + 1;
+				cubeCorn[2].Y = voxelVolume[y].Y;
+				cubeCorn[2].Z = voxelVolume[z].Z + 1;
+
+				cubeCorn[3].X = voxelVolume[x].X;
+				cubeCorn[3].Y = voxelVolume[y].Y;
+				cubeCorn[3].Z = voxelVolume[z].Z + 1;
+
+				cubeCorn[4].X = voxelVolume[x].X;
+				cubeCorn[4].Y = voxelVolume[y].Y + 1;
+				cubeCorn[4].Z = voxelVolume[z].Z;
+
+				cubeCorn[5].X = voxelVolume[x].X + 1;
+				cubeCorn[5].Y = voxelVolume[y].Y + 1;
+				cubeCorn[5].Z = voxelVolume[z].Z;
+
+				cubeCorn[6].X = voxelVolume[x].X + 1;
+				cubeCorn[6].Y = voxelVolume[y].Y + 1;
+				cubeCorn[6].Z = voxelVolume[z].Z + 1;
+
+				cubeCorn[7].X = voxelVolume[x].X;
+				cubeCorn[7].Y = voxelVolume[y].Y + 1;
+				cubeCorn[7].Z = voxelVolume[z].Z + 1;
+				
 
 				int edgeTableIndex = 0;
 				
-				if (cubeCorners[0][0, 1, 2] < isoLevel)
+				if (cubeCorn[0].Size() < isoLevel)
 				{
 					edgeTableIndex |= 1;
 				}
-				if (cubeCorners[1][0, 1, 2] < isoLevel)
+				if (cubeCorn[1].Size() < isoLevel)
 				{
 					edgeTableIndex |= 2;
 				}
-				if (cubeCorners[2][0, 1, 2] < isoLevel)
+				if (cubeCorn[2].Size() < isoLevel)
 				{
 					edgeTableIndex |= 4;
 				}
-				if (cubeCorners[3][0, 1, 2] < isoLevel)
+				if (cubeCorn[3].Size() < isoLevel)
 				{
 					edgeTableIndex |= 8;
 				}
-				if (cubeCorners[4][0, 1, 2] < isoLevel)
+				if (cubeCorn[4].Size() < isoLevel)
 				{
 					edgeTableIndex |= 16;
 				}
-				if (cubeCorners[5][0, 1, 2] < isoLevel)
+				if (cubeCorn[5].Size() < isoLevel)
 				{
 					edgeTableIndex |= 31;
 				}
-				if (cubeCorners[6][0, 1, 2] < isoLevel)
+				if (cubeCorn[6].Size() < isoLevel)
 				{
 					edgeTableIndex |= 64;
 				}
-				if (cubeCorners[7][0, 1, 2] < isoLevel)
+				if (cubeCorn[7].Size() < isoLevel)
 				{
 					edgeTableIndex |= 128;
 				}
 
-				int vertList[12];
-				int scalarPoint[8][3];
+				FVector vertList[12];
 
 				if (edgeTable[edgeTableIndex] == 0) 
 				{
@@ -121,7 +149,59 @@ void AMarchingVolume::Generate()
 				}
 				if (edgeTable[edgeTableIndex] & 1)
 				{
-					vertList[0] = interpolateVerts(isoLevel, cubeCorners[0][0, 1, 2], cubeCorners[1][0, 1, 2], scalarPoint[0][0,1,2], scalarPoint[1][0,1,2]);
+					vertList[0] = interpolateVerts(isoLevel, cubeCorn[0], cubeCorn[1]);
+				}
+				if (edgeTable[edgeTableIndex] & 2)
+				{
+					vertList[1] = interpolateVerts(isoLevel, cubeCorn[1], cubeCorn[2]);
+				}
+				if (edgeTable[edgeTableIndex] & 4)
+				{
+					vertList[2] = interpolateVerts(isoLevel, cubeCorn[2], cubeCorn[3]);
+				}
+				if (edgeTable[edgeTableIndex] & 8)
+				{
+					vertList[3] = interpolateVerts(isoLevel, cubeCorn[3], cubeCorn[4]);
+				}
+				if (edgeTable[edgeTableIndex] & 16)
+				{
+					vertList[4] = interpolateVerts(isoLevel, cubeCorn[4], cubeCorn[5]);
+				}
+				if (edgeTable[edgeTableIndex] & 32)
+				{
+					vertList[5] = interpolateVerts(isoLevel, cubeCorn[5], cubeCorn[6]);
+				}
+				if (edgeTable[edgeTableIndex] & 64)
+				{
+					vertList[6] = interpolateVerts(isoLevel, cubeCorn[6], cubeCorn[7]);
+				}
+				if (edgeTable[edgeTableIndex] & 128)
+				{
+					vertList[7] = interpolateVerts(isoLevel, cubeCorn[7], cubeCorn[4]);
+				}
+				if (edgeTable[edgeTableIndex] & 256)
+				{
+					vertList[8] = interpolateVerts(isoLevel, cubeCorn[0], cubeCorn[4]);
+				}
+				if (edgeTable[edgeTableIndex] & 512)
+				{
+					vertList[9] = interpolateVerts(isoLevel, cubeCorn[1], cubeCorn[5]);
+				}
+				if (edgeTable[edgeTableIndex] & 1024)
+				{
+					vertList[10] = interpolateVerts(isoLevel, cubeCorn[2], cubeCorn[6]);
+				}
+				if (edgeTable[edgeTableIndex] & 2048)
+				{
+					vertList[11] = interpolateVerts(isoLevel, cubeCorn[3], cubeCorn[7]);
+				}
+
+				FVector triangles[3];
+				for (int i = 0; triTable[edgeTableIndex][i] != -1; i += 3) {
+					triangles[0] = vertList[triTable[edgeTableIndex][i    ]];
+					triangles[1] = vertList[triTable[edgeTableIndex][i + 1]];
+					triangles[2] = vertList[triTable[edgeTableIndex][i + 2]];
+					triGenerator->GenerateMesh(triangles[0], triangles[1], triangles[2], 0, FProcMeshTangent(0.0f, 1.0f, 0.0f));
 				}
 			}
 		}

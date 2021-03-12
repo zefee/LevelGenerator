@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DrawDebugHelpers.h"
 #include "MeshGeneration.h"
 #include "MarchingVolume.generated.h"
 
@@ -17,23 +18,23 @@ public:
 	// Sets default values for this actor's properties
 	AMarchingVolume();
 
-	float cubeSize = 100.f;
-	float volume [100][100][100];
-	float isoLevel = 0.5f;
-	float cubeCorners[8][3];
+private:
 
-	float data[100 * 100 * 100];
-	
+	float cubeSize = 4.f;
+	FVector cubeCorn[8];
+	TArray<FVector> voxelVolume;
+	float isoLevel = 0.1f;
+	float volumeScale = 100;
+
 	AMeshGeneration* triGenerator;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-
-	float interpolateVerts(float iso, float vert1[3], float vert2[3], float scalar1, float scalar2);
+private:
+	FVector interpolateVerts(float iso, FVector vert1, FVector vert2);
+	void GenerateVoxelVolume();
 	void Generate();
-
 
 };
