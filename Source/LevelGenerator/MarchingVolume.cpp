@@ -66,45 +66,48 @@ void AMarchingVolume::Generate()
 
 	triGenerator = GetWorld()->SpawnActor<AMeshGeneration>(FVector::ZeroVector, FRotator::ZeroRotator);
 
+	int volumeIndex = 0;
+
 	for(int x = 0; x < cubeSize; x += 2)
 	{
 		for (int y = 0; y < cubeSize; y += 2)
 		{
 			for (int z = 0; z < cubeSize; z += 2)
 			{
-
-				cubeCorn[0].X = voxelVolume[x].X;				
-				cubeCorn[0].Y = voxelVolume[y].Y;
-				cubeCorn[0].Z = voxelVolume[z].Z;
-
-				cubeCorn[1].X = voxelVolume[x].X + 1;
-				cubeCorn[1].Y = voxelVolume[y].Y;
-				cubeCorn[1].Z = voxelVolume[z].Z;
-
-				cubeCorn[2].X = voxelVolume[x].X + 1;
-				cubeCorn[2].Y = voxelVolume[y].Y;
-				cubeCorn[2].Z = voxelVolume[z].Z + 1;
-
-				cubeCorn[3].X = voxelVolume[x].X;
-				cubeCorn[3].Y = voxelVolume[y].Y;
-				cubeCorn[3].Z = voxelVolume[z].Z + 1;
-
-				cubeCorn[4].X = voxelVolume[x].X;
-				cubeCorn[4].Y = voxelVolume[y].Y + 1;
-				cubeCorn[4].Z = voxelVolume[z].Z;
-
-				cubeCorn[5].X = voxelVolume[x].X + 1;
-				cubeCorn[5].Y = voxelVolume[y].Y + 1;
-				cubeCorn[5].Z = voxelVolume[z].Z;
-
-				cubeCorn[6].X = voxelVolume[x].X + 1;
-				cubeCorn[6].Y = voxelVolume[y].Y + 1;
-				cubeCorn[6].Z = voxelVolume[z].Z + 1;
-
-				cubeCorn[7].X = voxelVolume[x].X;
-				cubeCorn[7].Y = voxelVolume[y].Y + 1;
-				cubeCorn[7].Z = voxelVolume[z].Z + 1;
 				
+				cubeCorn[0].X = voxelVolume[volumeIndex].X;				
+				cubeCorn[0].Y = voxelVolume[volumeIndex].Y;
+				cubeCorn[0].Z = voxelVolume[volumeIndex].Z;
+											
+				cubeCorn[1].X = voxelVolume[volumeIndex + (cubeSize * cubeSize)].X;
+				cubeCorn[1].Y = voxelVolume[volumeIndex].Y;
+				cubeCorn[1].Z = voxelVolume[volumeIndex].Z;
+											
+				cubeCorn[2].X = voxelVolume[volumeIndex + (cubeSize * cubeSize)].X;
+				cubeCorn[2].Y = voxelVolume[volumeIndex].Y;
+				cubeCorn[2].Z = voxelVolume[volumeIndex + 1].Z;
+											
+				cubeCorn[3].X = voxelVolume[volumeIndex].X;
+				cubeCorn[3].Y = voxelVolume[volumeIndex].Y;
+				cubeCorn[3].Z = voxelVolume[volumeIndex + 1].Z;
+											
+				cubeCorn[4].X = voxelVolume[volumeIndex].X;
+				cubeCorn[4].Y = voxelVolume[volumeIndex + cubeSize].Y;
+				cubeCorn[4].Z = voxelVolume[volumeIndex].Z;
+											
+				cubeCorn[5].X = voxelVolume[volumeIndex + (cubeSize * cubeSize)].X;
+				cubeCorn[5].Y = voxelVolume[volumeIndex + cubeSize].Y;
+				cubeCorn[5].Z = voxelVolume[volumeIndex].Z;
+											
+				cubeCorn[6].X = voxelVolume[volumeIndex + (cubeSize * cubeSize)].X;
+				cubeCorn[6].Y = voxelVolume[volumeIndex + cubeSize].Y;
+				cubeCorn[6].Z = voxelVolume[volumeIndex + 1].Z;
+											
+				cubeCorn[7].X = voxelVolume[volumeIndex].X;
+				cubeCorn[7].Y = voxelVolume[volumeIndex + cubeSize].Y;
+				cubeCorn[7].Z = voxelVolume[volumeIndex + 1].Z;
+				
+				volumeIndex++;
 
 				int edgeTableIndex = 0;
 				
