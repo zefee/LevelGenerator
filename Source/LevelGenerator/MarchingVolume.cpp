@@ -1,13 +1,20 @@
 #include "MarchingVolume.h"
 
-extern int triTable[256][16];
-extern int edgeTable[256];
-
 // Sets default values
 AMarchingVolume::AMarchingVolume()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
+
+	ThisMesh = CreateDefaultSubobject<UProceduralMeshComponent>("GeneratedMesh");
+	SetRootComponent(ThisMesh);
+
+	voxels.SetNum((cubeSize + 1) * (cubeSize + 1) * (cubeSize + 1));
+
+	Noise = new FastNoiseLite();
+	Noise->SetFrequency(Frequency);
+	Noise->SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+	Noise->SetFractalType(FastNoiseLite::FractalType_FBm);
 
 }
 
@@ -16,492 +23,226 @@ void AMarchingVolume::BeginPlay()
 {
 	Super::BeginPlay();
 
-	GenerateVoxelVolume();
-
+	GenerateHeightMap();
 	Generate();
-
+	ApplyMesh();
 }
 
-void AMarchingVolume::GenerateVoxelVolume()
-{
-	voxelVolume.Reset();
 
-	for (int x = 0; x < cubeSize; x ++) {
-		for (int y = 0; y < cubeSize; y ++) {
-			for (int z = 0; z < cubeSize; z ++) {
-				voxelVolume.Add(FVector(x * volumeScale, y * volumeScale, z * volumeScale));
+
+void AMarchingVolume::GenerateHeightMap() 
+{
+
+	FVector position = GetActorLocation() / volumeScale;
+	for (int x = 0; x <= cubeSize; ++x)
+	{
+		for (int y = 0; y <= cubeSize; ++y)
+		{
+			for (int z = 0; z <= cubeSize; ++z)
+			{
+				voxels[GetVoxelIndex(x, y, z)] = Noise->GetNoise(x + position.X, y + position.Y, z + position.Z);
 			}
 		}
 	}
-
-	for (FVector vec : voxelVolume)
-	{
-		DrawDebugSphere(GetWorld(), vec, 2, 3, FColor(255, 0, 0), true, 999, 0, 0.5f);
-	}
-}
-
-
-FVector AMarchingVolume::interpolateVerts(float iso, FVector vert1, FVector vert2)
-{
-	double mu;
-	FVector VertPosition;
-
-	if (abs(iso - vert1.Size()) < 0.00001)
-		return(vert1);
-	if (abs(iso - vert2.Size()) < 0.00001)
-		return(vert2);
-	if (abs(vert1.Size() - vert2.Size()) < 0.00001)
-		return(vert1);
-	mu = (iso - vert1.Size()) / (vert2.Size() - vert1.Size());
-	VertPosition.X = vert1.X + mu * (vert2.X - vert1.X);
-	VertPosition.Y = vert1.Y + mu * (vert2.Y - vert1.Y);
-	VertPosition.Z = vert1.Z + mu * (vert2.Z - vert1.Z);
-
-	return(VertPosition);
 }
 
 
 void AMarchingVolume::Generate() 
 {
 
-	triGenerator = GetWorld()->SpawnActor<AMeshGeneration>(FVector::ZeroVector, FRotator::ZeroRotator);
+	float cube[8];
 
-	int volumeIndex = 0;
-
-	for(int x = 0; x < cubeSize; x += 2)
+	// The triangle order needs to change
+	// depending on which direction the 
+	// triangle is going to face
+	if (isoLevel > 0.0f)
 	{
-		for (int y = 0; y < cubeSize; y += 2)
+		triangleOrder[0] = 0;
+		triangleOrder[1] = 1;
+		triangleOrder[2] = 2;
+	}
+	else
+	{
+		triangleOrder[0] = 2;
+		triangleOrder[1] = 1;
+		triangleOrder[2] = 0;
+	}
+
+	for (int x = 0; x < cubeSize; ++x)
+	{
+		for (int y = 0; y < cubeSize; ++y)
 		{
-			for (int z = 0; z < cubeSize; z += 2)
+			for (int z = 0; z < cubeSize; ++z)
 			{
-				
-				cubeCorn[0].X = voxelVolume[volumeIndex].X;				
-				cubeCorn[0].Y = voxelVolume[volumeIndex].Y;
-				cubeCorn[0].Z = voxelVolume[volumeIndex].Z;
-											
-				cubeCorn[1].X = voxelVolume[volumeIndex + (cubeSize * cubeSize)].X;
-				cubeCorn[1].Y = voxelVolume[volumeIndex].Y;
-				cubeCorn[1].Z = voxelVolume[volumeIndex].Z;
-											
-				cubeCorn[2].X = voxelVolume[volumeIndex + (cubeSize * cubeSize)].X;
-				cubeCorn[2].Y = voxelVolume[volumeIndex].Y;
-				cubeCorn[2].Z = voxelVolume[volumeIndex + 1].Z;
-											
-				cubeCorn[3].X = voxelVolume[volumeIndex].X;
-				cubeCorn[3].Y = voxelVolume[volumeIndex].Y;
-				cubeCorn[3].Z = voxelVolume[volumeIndex + 1].Z;
-											
-				cubeCorn[4].X = voxelVolume[volumeIndex].X;
-				cubeCorn[4].Y = voxelVolume[volumeIndex + cubeSize].Y;
-				cubeCorn[4].Z = voxelVolume[volumeIndex].Z;
-											
-				cubeCorn[5].X = voxelVolume[volumeIndex + (cubeSize * cubeSize)].X;
-				cubeCorn[5].Y = voxelVolume[volumeIndex + cubeSize].Y;
-				cubeCorn[5].Z = voxelVolume[volumeIndex].Z;
-											
-				cubeCorn[6].X = voxelVolume[volumeIndex + (cubeSize * cubeSize)].X;
-				cubeCorn[6].Y = voxelVolume[volumeIndex + cubeSize].Y;
-				cubeCorn[6].Z = voxelVolume[volumeIndex + 1].Z;
-											
-				cubeCorn[7].X = voxelVolume[volumeIndex].X;
-				cubeCorn[7].Y = voxelVolume[volumeIndex + cubeSize].Y;
-				cubeCorn[7].Z = voxelVolume[volumeIndex + 1].Z;
-				
-				volumeIndex++;
-
-				int edgeTableIndex = 0;
-				
-				if (cubeCorn[0].Size() < isoLevel)
+				for (int i = 0; i < 8; ++i) 
 				{
-					edgeTableIndex |= 1;
-				}
-				if (cubeCorn[1].Size() < isoLevel)
-				{
-					edgeTableIndex |= 2;
-				}
-				if (cubeCorn[2].Size() < isoLevel)
-				{
-					edgeTableIndex |= 4;
-				}
-				if (cubeCorn[3].Size() < isoLevel)
-				{
-					edgeTableIndex |= 8;
-				}
-				if (cubeCorn[4].Size() < isoLevel)
-				{
-					edgeTableIndex |= 16;
-				}
-				if (cubeCorn[5].Size() < isoLevel)
-				{
-					edgeTableIndex |= 31;
-				}
-				if (cubeCorn[6].Size() < isoLevel)
-				{
-					edgeTableIndex |= 64;
-				}
-				if (cubeCorn[7].Size() < isoLevel)
-				{
-					edgeTableIndex |= 128;
+					cube[i] = voxels[GetVoxelIndex(x + vertexOffset[i][0], y + vertexOffset[i][1], z + vertexOffset[i][2])];
 				}
 
-				FVector vertList[12];
-
-				if (edgeTable[edgeTableIndex] == 0) 
-				{
-					return;
-				}
-				if (edgeTable[edgeTableIndex] & 1)
-				{
-					vertList[0] = interpolateVerts(isoLevel, cubeCorn[0], cubeCorn[1]);
-				}
-				if (edgeTable[edgeTableIndex] & 2)
-				{
-					vertList[1] = interpolateVerts(isoLevel, cubeCorn[1], cubeCorn[2]);
-				}
-				if (edgeTable[edgeTableIndex] & 4)
-				{
-					vertList[2] = interpolateVerts(isoLevel, cubeCorn[2], cubeCorn[3]);
-				}
-				if (edgeTable[edgeTableIndex] & 8)
-				{
-					vertList[3] = interpolateVerts(isoLevel, cubeCorn[3], cubeCorn[4]);
-				}
-				if (edgeTable[edgeTableIndex] & 16)
-				{
-					vertList[4] = interpolateVerts(isoLevel, cubeCorn[4], cubeCorn[5]);
-				}
-				if (edgeTable[edgeTableIndex] & 32)
-				{
-					vertList[5] = interpolateVerts(isoLevel, cubeCorn[5], cubeCorn[6]);
-				}
-				if (edgeTable[edgeTableIndex] & 64)
-				{
-					vertList[6] = interpolateVerts(isoLevel, cubeCorn[6], cubeCorn[7]);
-				}
-				if (edgeTable[edgeTableIndex] & 128)
-				{
-					vertList[7] = interpolateVerts(isoLevel, cubeCorn[7], cubeCorn[4]);
-				}
-				if (edgeTable[edgeTableIndex] & 256)
-				{
-					vertList[8] = interpolateVerts(isoLevel, cubeCorn[0], cubeCorn[4]);
-				}
-				if (edgeTable[edgeTableIndex] & 512)
-				{
-					vertList[9] = interpolateVerts(isoLevel, cubeCorn[1], cubeCorn[5]);
-				}
-				if (edgeTable[edgeTableIndex] & 1024)
-				{
-					vertList[10] = interpolateVerts(isoLevel, cubeCorn[2], cubeCorn[6]);
-				}
-				if (edgeTable[edgeTableIndex] & 2048)
-				{
-					vertList[11] = interpolateVerts(isoLevel, cubeCorn[3], cubeCorn[7]);
-				}
-
-				FVector triangles[3];
-				for (int i = 0; triTable[edgeTableIndex][i] != -1; i += 3) {
-					triangles[0] = vertList[triTable[edgeTableIndex][i    ]];
-					triangles[1] = vertList[triTable[edgeTableIndex][i + 1]];
-					triangles[2] = vertList[triTable[edgeTableIndex][i + 2]];
-					triGenerator->GenerateMesh(triangles[0], triangles[1], triangles[2], 0, FProcMeshTangent(0.0f, 1.0f, 0.0f));
-				}
+				March(x, y, z, cube);
 			}
 		}
 	}
 }
 
+void AMarchingVolume::March(int X, int Y, int Z, const float cubeCorner[8]) {
 
-int edgeTable[256] = {
-0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
-0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
-0x190, 0x99 , 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
-0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93, 0xf99, 0xe90,
-0x230, 0x339, 0x33 , 0x13a, 0x636, 0x73f, 0x435, 0x53c,
-0xa3c, 0xb35, 0x83f, 0x936, 0xe3a, 0xf33, 0xc39, 0xd30,
-0x3a0, 0x2a9, 0x1a3, 0xaa , 0x7a6, 0x6af, 0x5a5, 0x4ac,
-0xbac, 0xaa5, 0x9af, 0x8a6, 0xfaa, 0xea3, 0xda9, 0xca0,
-0x460, 0x569, 0x663, 0x76a, 0x66 , 0x16f, 0x265, 0x36c,
-0xc6c, 0xd65, 0xe6f, 0xf66, 0x86a, 0x963, 0xa69, 0xb60,
-0x5f0, 0x4f9, 0x7f3, 0x6fa, 0x1f6, 0xff , 0x3f5, 0x2fc,
-0xdfc, 0xcf5, 0xfff, 0xef6, 0x9fa, 0x8f3, 0xbf9, 0xaf0,
-0x650, 0x759, 0x453, 0x55a, 0x256, 0x35f, 0x55 , 0x15c,
-0xe5c, 0xf55, 0xc5f, 0xd56, 0xa5a, 0xb53, 0x859, 0x950,
-0x7c0, 0x6c9, 0x5c3, 0x4ca, 0x3c6, 0x2cf, 0x1c5, 0xcc ,
-0xfcc, 0xec5, 0xdcf, 0xcc6, 0xbca, 0xac3, 0x9c9, 0x8c0,
-0x8c0, 0x9c9, 0xac3, 0xbca, 0xcc6, 0xdcf, 0xec5, 0xfcc,
-0xcc , 0x1c5, 0x2cf, 0x3c6, 0x4ca, 0x5c3, 0x6c9, 0x7c0,
-0x950, 0x859, 0xb53, 0xa5a, 0xd56, 0xc5f, 0xf55, 0xe5c,
-0x15c, 0x55 , 0x35f, 0x256, 0x55a, 0x453, 0x759, 0x650,
-0xaf0, 0xbf9, 0x8f3, 0x9fa, 0xef6, 0xfff, 0xcf5, 0xdfc,
-0x2fc, 0x3f5, 0xff , 0x1f6, 0x6fa, 0x7f3, 0x4f9, 0x5f0,
-0xb60, 0xa69, 0x963, 0x86a, 0xf66, 0xe6f, 0xd65, 0xc6c,
-0x36c, 0x265, 0x16f, 0x66 , 0x76a, 0x663, 0x569, 0x460,
-0xca0, 0xda9, 0xea3, 0xfaa, 0x8a6, 0x9af, 0xaa5, 0xbac,
-0x4ac, 0x5a5, 0x6af, 0x7a6, 0xaa , 0x1a3, 0x2a9, 0x3a0,
-0xd30, 0xc39, 0xf33, 0xe3a, 0x936, 0x83f, 0xb35, 0xa3c,
-0x53c, 0x435, 0x73f, 0x636, 0x13a, 0x33 , 0x339, 0x230,
-0xe90, 0xf99, 0xc93, 0xd9a, 0xa96, 0xb9f, 0x895, 0x99c,
-0x69c, 0x795, 0x49f, 0x596, 0x29a, 0x393, 0x99 , 0x190,
-0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
-0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0 };
+	int edgeTableIndex = 0;
+	
+	// Calculate the unique index for each cube
+	// to figure out if it's inside or outside of the surface level
+	if (cubeCorner[0] < isoLevel)
+	{
+		edgeTableIndex |= 1;
+	}
+	if (cubeCorner[1] < isoLevel)
+	{
+		edgeTableIndex |= 2;
+	}
+	if (cubeCorner[2] < isoLevel)
+	{
+		edgeTableIndex |= 4;
+	}
+	if (cubeCorner[3] < isoLevel)
+	{
+		edgeTableIndex |= 8;
+	}
+	if (cubeCorner[4] < isoLevel)
+	{
+		edgeTableIndex |= 16;
+	}
+	if (cubeCorner[5] < isoLevel)
+	{
+		edgeTableIndex |= 32;
+	}
+	if (cubeCorner[6] < isoLevel)
+	{
+		edgeTableIndex |= 64;
+	}
+	if (cubeCorner[7] < isoLevel)
+	{
+		edgeTableIndex |= 128;
+	} 
 
+	// Check which corners were below the iso level
+	// and set up the verts for each of the edges
+	// that are going to generate triangles
+	FVector vertList[12];
+	if (edgeTable[edgeTableIndex] == 0)
+	{
+		return;
+	}
+	if (edgeTable[edgeTableIndex] & 1)
+	{
+		vertList[0].X = X + (vertexOffset[0][0] + InterpolateVerts(cubeCorner[0], cubeCorner[1]) * edgeDirection[0][0]);
+		vertList[0].Y = Y + (vertexOffset[0][1] + InterpolateVerts(cubeCorner[0], cubeCorner[1]) * edgeDirection[0][1]);
+		vertList[0].Z = Z + (vertexOffset[0][2] + InterpolateVerts(cubeCorner[0], cubeCorner[1]) * edgeDirection[0][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 2)
+	{
+		vertList[1].X = X + (vertexOffset[1][0] + InterpolateVerts(cubeCorner[1], cubeCorner[2]) * edgeDirection[1][0]);
+		vertList[1].Y = Y + (vertexOffset[1][1] + InterpolateVerts(cubeCorner[1], cubeCorner[2]) * edgeDirection[1][1]);
+		vertList[1].Z = Z + (vertexOffset[1][2] + InterpolateVerts(cubeCorner[1], cubeCorner[2]) * edgeDirection[1][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 4)
+	{
+		vertList[2].X = X + (vertexOffset[2][0] + InterpolateVerts(cubeCorner[2], cubeCorner[3]) * edgeDirection[2][0]);
+		vertList[2].Y = Y + (vertexOffset[2][1] + InterpolateVerts(cubeCorner[2], cubeCorner[3]) * edgeDirection[2][1]);
+		vertList[2].Z = Z + (vertexOffset[2][2] + InterpolateVerts(cubeCorner[2], cubeCorner[3]) * edgeDirection[2][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 8)
+	{
+		vertList[3].X = X + (vertexOffset[3][0] + InterpolateVerts(cubeCorner[3], cubeCorner[0]) * edgeDirection[3][0]);
+		vertList[3].Y = Y + (vertexOffset[3][1] + InterpolateVerts(cubeCorner[3], cubeCorner[0]) * edgeDirection[3][1]);
+		vertList[3].Z = Z + (vertexOffset[3][2] + InterpolateVerts(cubeCorner[3], cubeCorner[0]) * edgeDirection[3][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 16)
+	{
+		vertList[4].X = X + (vertexOffset[4][0] + InterpolateVerts(cubeCorner[4], cubeCorner[5]) * edgeDirection[4][0]);
+		vertList[4].Y = Y + (vertexOffset[4][1] + InterpolateVerts(cubeCorner[4], cubeCorner[5]) * edgeDirection[4][1]);
+		vertList[4].Z = Z + (vertexOffset[4][2] + InterpolateVerts(cubeCorner[4], cubeCorner[5]) * edgeDirection[4][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 32)
+	{
+		vertList[5].X = X + (vertexOffset[5][0] + InterpolateVerts(cubeCorner[5], cubeCorner[6]) * edgeDirection[5][0]);
+		vertList[5].Y = Y + (vertexOffset[5][1] + InterpolateVerts(cubeCorner[5], cubeCorner[6]) * edgeDirection[5][1]);
+		vertList[5].Z = Z + (vertexOffset[5][2] + InterpolateVerts(cubeCorner[5], cubeCorner[6]) * edgeDirection[5][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 64)
+	{
+		vertList[6].X = X + (vertexOffset[6][0] + InterpolateVerts(cubeCorner[6], cubeCorner[7]) * edgeDirection[6][0]);
+		vertList[6].Y = Y + (vertexOffset[6][1] + InterpolateVerts(cubeCorner[6], cubeCorner[7]) * edgeDirection[6][1]);
+		vertList[6].Z = Z + (vertexOffset[6][2] + InterpolateVerts(cubeCorner[6], cubeCorner[7]) * edgeDirection[6][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 128)
+	{
+		vertList[7].X = X + (vertexOffset[7][0] + InterpolateVerts(cubeCorner[7], cubeCorner[4]) * edgeDirection[7][0]);
+		vertList[7].Y = Y + (vertexOffset[7][1] + InterpolateVerts(cubeCorner[7], cubeCorner[4]) * edgeDirection[7][1]);
+		vertList[7].Z = Z + (vertexOffset[7][2] + InterpolateVerts(cubeCorner[7], cubeCorner[4]) * edgeDirection[7][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 256)
+	{
+		vertList[8].X = X + (vertexOffset[0][0] + InterpolateVerts(cubeCorner[0], cubeCorner[4]) * edgeDirection[8][0]);
+		vertList[8].Y = Y + (vertexOffset[0][1] + InterpolateVerts(cubeCorner[0], cubeCorner[4]) * edgeDirection[8][1]);
+		vertList[8].Z = Z + (vertexOffset[0][2] + InterpolateVerts(cubeCorner[0], cubeCorner[4]) * edgeDirection[8][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 512)
+	{
+		vertList[9].X = X + (vertexOffset[1][0] + InterpolateVerts(cubeCorner[1], cubeCorner[5]) * edgeDirection[9][0]);
+		vertList[9].Y = Y + (vertexOffset[1][1] + InterpolateVerts(cubeCorner[1], cubeCorner[5]) * edgeDirection[9][1]);
+		vertList[9].Z = Z + (vertexOffset[1][2] + InterpolateVerts(cubeCorner[1], cubeCorner[5]) * edgeDirection[9][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 1024)
+	{
+		vertList[10].X = X + (vertexOffset[2][0] + InterpolateVerts(cubeCorner[2], cubeCorner[6]) * edgeDirection[10][0]);
+		vertList[10].Y = Y + (vertexOffset[2][1] + InterpolateVerts(cubeCorner[2], cubeCorner[6]) * edgeDirection[10][1]);
+		vertList[10].Z = Z + (vertexOffset[2][2] + InterpolateVerts(cubeCorner[2], cubeCorner[6]) * edgeDirection[10][2]);
+	}
+	if (edgeTable[edgeTableIndex] & 2048)
+	{
+		vertList[11].X = X + (vertexOffset[3][0] + InterpolateVerts(cubeCorner[3], cubeCorner[7]) * edgeDirection[11][0]);
+		vertList[11].Y = Y + (vertexOffset[3][1] + InterpolateVerts(cubeCorner[3], cubeCorner[7]) * edgeDirection[11][1]);
+		vertList[11].Z = Z + (vertexOffset[3][2] + InterpolateVerts(cubeCorner[3], cubeCorner[7]) * edgeDirection[11][2]);
+	} 
 
-int triTable[256][16] =
-{ {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 8, 3, 9, 8, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 3, 1, 2, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{9, 2, 10, 0, 2, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{2, 8, 3, 2, 10, 8, 10, 9, 8, -1, -1, -1, -1, -1, -1, -1},
-{3, 11, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 11, 2, 8, 11, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 9, 0, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 11, 2, 1, 9, 11, 9, 8, 11, -1, -1, -1, -1, -1, -1, -1},
-{3, 10, 1, 11, 10, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 10, 1, 0, 8, 10, 8, 11, 10, -1, -1, -1, -1, -1, -1, -1},
-{3, 9, 0, 3, 11, 9, 11, 10, 9, -1, -1, -1, -1, -1, -1, -1},
-{9, 8, 10, 10, 8, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 3, 0, 7, 3, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 1, 9, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 1, 9, 4, 7, 1, 7, 3, 1, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 10, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{3, 4, 7, 3, 0, 4, 1, 2, 10, -1, -1, -1, -1, -1, -1, -1},
-{9, 2, 10, 9, 0, 2, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1},
-{2, 10, 9, 2, 9, 7, 2, 7, 3, 7, 9, 4, -1, -1, -1, -1},
-{8, 4, 7, 3, 11, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{11, 4, 7, 11, 2, 4, 2, 0, 4, -1, -1, -1, -1, -1, -1, -1},
-{9, 0, 1, 8, 4, 7, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1},
-{4, 7, 11, 9, 4, 11, 9, 11, 2, 9, 2, 1, -1, -1, -1, -1},
-{3, 10, 1, 3, 11, 10, 7, 8, 4, -1, -1, -1, -1, -1, -1, -1},
-{1, 11, 10, 1, 4, 11, 1, 0, 4, 7, 11, 4, -1, -1, -1, -1},
-{4, 7, 8, 9, 0, 11, 9, 11, 10, 11, 0, 3, -1, -1, -1, -1},
-{4, 7, 11, 4, 11, 9, 9, 11, 10, -1, -1, -1, -1, -1, -1, -1},
-{9, 5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{9, 5, 4, 0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 5, 4, 1, 5, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{8, 5, 4, 8, 3, 5, 3, 1, 5, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 10, 9, 5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{3, 0, 8, 1, 2, 10, 4, 9, 5, -1, -1, -1, -1, -1, -1, -1},
-{5, 2, 10, 5, 4, 2, 4, 0, 2, -1, -1, -1, -1, -1, -1, -1},
-{2, 10, 5, 3, 2, 5, 3, 5, 4, 3, 4, 8, -1, -1, -1, -1},
-{9, 5, 4, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 11, 2, 0, 8, 11, 4, 9, 5, -1, -1, -1, -1, -1, -1, -1},
-{0, 5, 4, 0, 1, 5, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1},
-{2, 1, 5, 2, 5, 8, 2, 8, 11, 4, 8, 5, -1, -1, -1, -1},
-{10, 3, 11, 10, 1, 3, 9, 5, 4, -1, -1, -1, -1, -1, -1, -1},
-{4, 9, 5, 0, 8, 1, 8, 10, 1, 8, 11, 10, -1, -1, -1, -1},
-{5, 4, 0, 5, 0, 11, 5, 11, 10, 11, 0, 3, -1, -1, -1, -1},
-{5, 4, 8, 5, 8, 10, 10, 8, 11, -1, -1, -1, -1, -1, -1, -1},
-{9, 7, 8, 5, 7, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{9, 3, 0, 9, 5, 3, 5, 7, 3, -1, -1, -1, -1, -1, -1, -1},
-{0, 7, 8, 0, 1, 7, 1, 5, 7, -1, -1, -1, -1, -1, -1, -1},
-{1, 5, 3, 3, 5, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{9, 7, 8, 9, 5, 7, 10, 1, 2, -1, -1, -1, -1, -1, -1, -1},
-{10, 1, 2, 9, 5, 0, 5, 3, 0, 5, 7, 3, -1, -1, -1, -1},
-{8, 0, 2, 8, 2, 5, 8, 5, 7, 10, 5, 2, -1, -1, -1, -1},
-{2, 10, 5, 2, 5, 3, 3, 5, 7, -1, -1, -1, -1, -1, -1, -1},
-{7, 9, 5, 7, 8, 9, 3, 11, 2, -1, -1, -1, -1, -1, -1, -1},
-{9, 5, 7, 9, 7, 2, 9, 2, 0, 2, 7, 11, -1, -1, -1, -1},
-{2, 3, 11, 0, 1, 8, 1, 7, 8, 1, 5, 7, -1, -1, -1, -1},
-{11, 2, 1, 11, 1, 7, 7, 1, 5, -1, -1, -1, -1, -1, -1, -1},
-{9, 5, 8, 8, 5, 7, 10, 1, 3, 10, 3, 11, -1, -1, -1, -1},
-{5, 7, 0, 5, 0, 9, 7, 11, 0, 1, 0, 10, 11, 10, 0, -1},
-{11, 10, 0, 11, 0, 3, 10, 5, 0, 8, 0, 7, 5, 7, 0, -1},
-{11, 10, 5, 7, 11, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{10, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 3, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{9, 0, 1, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 8, 3, 1, 9, 8, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1},
-{1, 6, 5, 2, 6, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 6, 5, 1, 2, 6, 3, 0, 8, -1, -1, -1, -1, -1, -1, -1},
-{9, 6, 5, 9, 0, 6, 0, 2, 6, -1, -1, -1, -1, -1, -1, -1},
-{5, 9, 8, 5, 8, 2, 5, 2, 6, 3, 2, 8, -1, -1, -1, -1},
-{2, 3, 11, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{11, 0, 8, 11, 2, 0, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1},
-{0, 1, 9, 2, 3, 11, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1},
-{5, 10, 6, 1, 9, 2, 9, 11, 2, 9, 8, 11, -1, -1, -1, -1},
-{6, 3, 11, 6, 5, 3, 5, 1, 3, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 11, 0, 11, 5, 0, 5, 1, 5, 11, 6, -1, -1, -1, -1},
-{3, 11, 6, 0, 3, 6, 0, 6, 5, 0, 5, 9, -1, -1, -1, -1},
-{6, 5, 9, 6, 9, 11, 11, 9, 8, -1, -1, -1, -1, -1, -1, -1},
-{5, 10, 6, 4, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 3, 0, 4, 7, 3, 6, 5, 10, -1, -1, -1, -1, -1, -1, -1},
-{1, 9, 0, 5, 10, 6, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1},
-{10, 6, 5, 1, 9, 7, 1, 7, 3, 7, 9, 4, -1, -1, -1, -1},
-{6, 1, 2, 6, 5, 1, 4, 7, 8, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 5, 5, 2, 6, 3, 0, 4, 3, 4, 7, -1, -1, -1, -1},
-{8, 4, 7, 9, 0, 5, 0, 6, 5, 0, 2, 6, -1, -1, -1, -1},
-{7, 3, 9, 7, 9, 4, 3, 2, 9, 5, 9, 6, 2, 6, 9, -1},
-{3, 11, 2, 7, 8, 4, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1},
-{5, 10, 6, 4, 7, 2, 4, 2, 0, 2, 7, 11, -1, -1, -1, -1},
-{0, 1, 9, 4, 7, 8, 2, 3, 11, 5, 10, 6, -1, -1, -1, -1},
-{9, 2, 1, 9, 11, 2, 9, 4, 11, 7, 11, 4, 5, 10, 6, -1},
-{8, 4, 7, 3, 11, 5, 3, 5, 1, 5, 11, 6, -1, -1, -1, -1},
-{5, 1, 11, 5, 11, 6, 1, 0, 11, 7, 11, 4, 0, 4, 11, -1},
-{0, 5, 9, 0, 6, 5, 0, 3, 6, 11, 6, 3, 8, 4, 7, -1},
-{6, 5, 9, 6, 9, 11, 4, 7, 9, 7, 11, 9, -1, -1, -1, -1},
-{10, 4, 9, 6, 4, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 10, 6, 4, 9, 10, 0, 8, 3, -1, -1, -1, -1, -1, -1, -1},
-{10, 0, 1, 10, 6, 0, 6, 4, 0, -1, -1, -1, -1, -1, -1, -1},
-{8, 3, 1, 8, 1, 6, 8, 6, 4, 6, 1, 10, -1, -1, -1, -1},
-{1, 4, 9, 1, 2, 4, 2, 6, 4, -1, -1, -1, -1, -1, -1, -1},
-{3, 0, 8, 1, 2, 9, 2, 4, 9, 2, 6, 4, -1, -1, -1, -1},
-{0, 2, 4, 4, 2, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{8, 3, 2, 8, 2, 4, 4, 2, 6, -1, -1, -1, -1, -1, -1, -1},
-{10, 4, 9, 10, 6, 4, 11, 2, 3, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 2, 2, 8, 11, 4, 9, 10, 4, 10, 6, -1, -1, -1, -1},
-{3, 11, 2, 0, 1, 6, 0, 6, 4, 6, 1, 10, -1, -1, -1, -1},
-{6, 4, 1, 6, 1, 10, 4, 8, 1, 2, 1, 11, 8, 11, 1, -1},
-{9, 6, 4, 9, 3, 6, 9, 1, 3, 11, 6, 3, -1, -1, -1, -1},
-{8, 11, 1, 8, 1, 0, 11, 6, 1, 9, 1, 4, 6, 4, 1, -1},
-{3, 11, 6, 3, 6, 0, 0, 6, 4, -1, -1, -1, -1, -1, -1, -1},
-{6, 4, 8, 11, 6, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{7, 10, 6, 7, 8, 10, 8, 9, 10, -1, -1, -1, -1, -1, -1, -1},
-{0, 7, 3, 0, 10, 7, 0, 9, 10, 6, 7, 10, -1, -1, -1, -1},
-{10, 6, 7, 1, 10, 7, 1, 7, 8, 1, 8, 0, -1, -1, -1, -1},
-{10, 6, 7, 10, 7, 1, 1, 7, 3, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 6, 1, 6, 8, 1, 8, 9, 8, 6, 7, -1, -1, -1, -1},
-{2, 6, 9, 2, 9, 1, 6, 7, 9, 0, 9, 3, 7, 3, 9, -1},
-{7, 8, 0, 7, 0, 6, 6, 0, 2, -1, -1, -1, -1, -1, -1, -1},
-{7, 3, 2, 6, 7, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{2, 3, 11, 10, 6, 8, 10, 8, 9, 8, 6, 7, -1, -1, -1, -1},
-{2, 0, 7, 2, 7, 11, 0, 9, 7, 6, 7, 10, 9, 10, 7, -1},
-{1, 8, 0, 1, 7, 8, 1, 10, 7, 6, 7, 10, 2, 3, 11, -1},
-{11, 2, 1, 11, 1, 7, 10, 6, 1, 6, 7, 1, -1, -1, -1, -1},
-{8, 9, 6, 8, 6, 7, 9, 1, 6, 11, 6, 3, 1, 3, 6, -1},
-{0, 9, 1, 11, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{7, 8, 0, 7, 0, 6, 3, 11, 0, 11, 6, 0, -1, -1, -1, -1},
-{7, 11, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{7, 6, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{3, 0, 8, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 1, 9, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{8, 1, 9, 8, 3, 1, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1},
-{10, 1, 2, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 10, 3, 0, 8, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1},
-{2, 9, 0, 2, 10, 9, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1},
-{6, 11, 7, 2, 10, 3, 10, 8, 3, 10, 9, 8, -1, -1, -1, -1},
-{7, 2, 3, 6, 2, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{7, 0, 8, 7, 6, 0, 6, 2, 0, -1, -1, -1, -1, -1, -1, -1},
-{2, 7, 6, 2, 3, 7, 0, 1, 9, -1, -1, -1, -1, -1, -1, -1},
-{1, 6, 2, 1, 8, 6, 1, 9, 8, 8, 7, 6, -1, -1, -1, -1},
-{10, 7, 6, 10, 1, 7, 1, 3, 7, -1, -1, -1, -1, -1, -1, -1},
-{10, 7, 6, 1, 7, 10, 1, 8, 7, 1, 0, 8, -1, -1, -1, -1},
-{0, 3, 7, 0, 7, 10, 0, 10, 9, 6, 10, 7, -1, -1, -1, -1},
-{7, 6, 10, 7, 10, 8, 8, 10, 9, -1, -1, -1, -1, -1, -1, -1},
-{6, 8, 4, 11, 8, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{3, 6, 11, 3, 0, 6, 0, 4, 6, -1, -1, -1, -1, -1, -1, -1},
-{8, 6, 11, 8, 4, 6, 9, 0, 1, -1, -1, -1, -1, -1, -1, -1},
-{9, 4, 6, 9, 6, 3, 9, 3, 1, 11, 3, 6, -1, -1, -1, -1},
-{6, 8, 4, 6, 11, 8, 2, 10, 1, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 10, 3, 0, 11, 0, 6, 11, 0, 4, 6, -1, -1, -1, -1},
-{4, 11, 8, 4, 6, 11, 0, 2, 9, 2, 10, 9, -1, -1, -1, -1},
-{10, 9, 3, 10, 3, 2, 9, 4, 3, 11, 3, 6, 4, 6, 3, -1},
-{8, 2, 3, 8, 4, 2, 4, 6, 2, -1, -1, -1, -1, -1, -1, -1},
-{0, 4, 2, 4, 6, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 9, 0, 2, 3, 4, 2, 4, 6, 4, 3, 8, -1, -1, -1, -1},
-{1, 9, 4, 1, 4, 2, 2, 4, 6, -1, -1, -1, -1, -1, -1, -1},
-{8, 1, 3, 8, 6, 1, 8, 4, 6, 6, 10, 1, -1, -1, -1, -1},
-{10, 1, 0, 10, 0, 6, 6, 0, 4, -1, -1, -1, -1, -1, -1, -1},
-{4, 6, 3, 4, 3, 8, 6, 10, 3, 0, 3, 9, 10, 9, 3, -1},
-{10, 9, 4, 6, 10, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 9, 5, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 3, 4, 9, 5, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1},
-{5, 0, 1, 5, 4, 0, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1},
-{11, 7, 6, 8, 3, 4, 3, 5, 4, 3, 1, 5, -1, -1, -1, -1},
-{9, 5, 4, 10, 1, 2, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1},
-{6, 11, 7, 1, 2, 10, 0, 8, 3, 4, 9, 5, -1, -1, -1, -1},
-{7, 6, 11, 5, 4, 10, 4, 2, 10, 4, 0, 2, -1, -1, -1, -1},
-{3, 4, 8, 3, 5, 4, 3, 2, 5, 10, 5, 2, 11, 7, 6, -1},
-{7, 2, 3, 7, 6, 2, 5, 4, 9, -1, -1, -1, -1, -1, -1, -1},
-{9, 5, 4, 0, 8, 6, 0, 6, 2, 6, 8, 7, -1, -1, -1, -1},
-{3, 6, 2, 3, 7, 6, 1, 5, 0, 5, 4, 0, -1, -1, -1, -1},
-{6, 2, 8, 6, 8, 7, 2, 1, 8, 4, 8, 5, 1, 5, 8, -1},
-{9, 5, 4, 10, 1, 6, 1, 7, 6, 1, 3, 7, -1, -1, -1, -1},
-{1, 6, 10, 1, 7, 6, 1, 0, 7, 8, 7, 0, 9, 5, 4, -1},
-{4, 0, 10, 4, 10, 5, 0, 3, 10, 6, 10, 7, 3, 7, 10, -1},
-{7, 6, 10, 7, 10, 8, 5, 4, 10, 4, 8, 10, -1, -1, -1, -1},
-{6, 9, 5, 6, 11, 9, 11, 8, 9, -1, -1, -1, -1, -1, -1, -1},
-{3, 6, 11, 0, 6, 3, 0, 5, 6, 0, 9, 5, -1, -1, -1, -1},
-{0, 11, 8, 0, 5, 11, 0, 1, 5, 5, 6, 11, -1, -1, -1, -1},
-{6, 11, 3, 6, 3, 5, 5, 3, 1, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 10, 9, 5, 11, 9, 11, 8, 11, 5, 6, -1, -1, -1, -1},
-{0, 11, 3, 0, 6, 11, 0, 9, 6, 5, 6, 9, 1, 2, 10, -1},
-{11, 8, 5, 11, 5, 6, 8, 0, 5, 10, 5, 2, 0, 2, 5, -1},
-{6, 11, 3, 6, 3, 5, 2, 10, 3, 10, 5, 3, -1, -1, -1, -1},
-{5, 8, 9, 5, 2, 8, 5, 6, 2, 3, 8, 2, -1, -1, -1, -1},
-{9, 5, 6, 9, 6, 0, 0, 6, 2, -1, -1, -1, -1, -1, -1, -1},
-{1, 5, 8, 1, 8, 0, 5, 6, 8, 3, 8, 2, 6, 2, 8, -1},
-{1, 5, 6, 2, 1, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 3, 6, 1, 6, 10, 3, 8, 6, 5, 6, 9, 8, 9, 6, -1},
-{10, 1, 0, 10, 0, 6, 9, 5, 0, 5, 6, 0, -1, -1, -1, -1},
-{0, 3, 8, 5, 6, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{10, 5, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{11, 5, 10, 7, 5, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{11, 5, 10, 11, 7, 5, 8, 3, 0, -1, -1, -1, -1, -1, -1, -1},
-{5, 11, 7, 5, 10, 11, 1, 9, 0, -1, -1, -1, -1, -1, -1, -1},
-{10, 7, 5, 10, 11, 7, 9, 8, 1, 8, 3, 1, -1, -1, -1, -1},
-{11, 1, 2, 11, 7, 1, 7, 5, 1, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 3, 1, 2, 7, 1, 7, 5, 7, 2, 11, -1, -1, -1, -1},
-{9, 7, 5, 9, 2, 7, 9, 0, 2, 2, 11, 7, -1, -1, -1, -1},
-{7, 5, 2, 7, 2, 11, 5, 9, 2, 3, 2, 8, 9, 8, 2, -1},
-{2, 5, 10, 2, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1},
-{8, 2, 0, 8, 5, 2, 8, 7, 5, 10, 2, 5, -1, -1, -1, -1},
-{9, 0, 1, 5, 10, 3, 5, 3, 7, 3, 10, 2, -1, -1, -1, -1},
-{9, 8, 2, 9, 2, 1, 8, 7, 2, 10, 2, 5, 7, 5, 2, -1},
-{1, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 7, 0, 7, 1, 1, 7, 5, -1, -1, -1, -1, -1, -1, -1},
-{9, 0, 3, 9, 3, 5, 5, 3, 7, -1, -1, -1, -1, -1, -1, -1},
-{9, 8, 7, 5, 9, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{5, 8, 4, 5, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1},
-{5, 0, 4, 5, 11, 0, 5, 10, 11, 11, 3, 0, -1, -1, -1, -1},
-{0, 1, 9, 8, 4, 10, 8, 10, 11, 10, 4, 5, -1, -1, -1, -1},
-{10, 11, 4, 10, 4, 5, 11, 3, 4, 9, 4, 1, 3, 1, 4, -1},
-{2, 5, 1, 2, 8, 5, 2, 11, 8, 4, 5, 8, -1, -1, -1, -1},
-{0, 4, 11, 0, 11, 3, 4, 5, 11, 2, 11, 1, 5, 1, 11, -1},
-{0, 2, 5, 0, 5, 9, 2, 11, 5, 4, 5, 8, 11, 8, 5, -1},
-{9, 4, 5, 2, 11, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{2, 5, 10, 3, 5, 2, 3, 4, 5, 3, 8, 4, -1, -1, -1, -1},
-{5, 10, 2, 5, 2, 4, 4, 2, 0, -1, -1, -1, -1, -1, -1, -1},
-{3, 10, 2, 3, 5, 10, 3, 8, 5, 4, 5, 8, 0, 1, 9, -1},
-{5, 10, 2, 5, 2, 4, 1, 9, 2, 9, 4, 2, -1, -1, -1, -1},
-{8, 4, 5, 8, 5, 3, 3, 5, 1, -1, -1, -1, -1, -1, -1, -1},
-{0, 4, 5, 1, 0, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{8, 4, 5, 8, 5, 3, 9, 0, 5, 0, 3, 5, -1, -1, -1, -1},
-{9, 4, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 11, 7, 4, 9, 11, 9, 10, 11, -1, -1, -1, -1, -1, -1, -1},
-{0, 8, 3, 4, 9, 7, 9, 11, 7, 9, 10, 11, -1, -1, -1, -1},
-{1, 10, 11, 1, 11, 4, 1, 4, 0, 7, 4, 11, -1, -1, -1, -1},
-{3, 1, 4, 3, 4, 8, 1, 10, 4, 7, 4, 11, 10, 11, 4, -1},
-{4, 11, 7, 9, 11, 4, 9, 2, 11, 9, 1, 2, -1, -1, -1, -1},
-{9, 7, 4, 9, 11, 7, 9, 1, 11, 2, 11, 1, 0, 8, 3, -1},
-{11, 7, 4, 11, 4, 2, 2, 4, 0, -1, -1, -1, -1, -1, -1, -1},
-{11, 7, 4, 11, 4, 2, 8, 3, 4, 3, 2, 4, -1, -1, -1, -1},
-{2, 9, 10, 2, 7, 9, 2, 3, 7, 7, 4, 9, -1, -1, -1, -1},
-{9, 10, 7, 9, 7, 4, 10, 2, 7, 8, 7, 0, 2, 0, 7, -1},
-{3, 7, 10, 3, 10, 2, 7, 4, 10, 1, 10, 0, 4, 0, 10, -1},
-{1, 10, 2, 8, 7, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 9, 1, 4, 1, 7, 7, 1, 3, -1, -1, -1, -1, -1, -1, -1},
-{4, 9, 1, 4, 1, 7, 0, 8, 1, 8, 7, 1, -1, -1, -1, -1},
-{4, 0, 3, 7, 4, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{4, 8, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{9, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{3, 0, 9, 3, 9, 11, 11, 9, 10, -1, -1, -1, -1, -1, -1, -1},
-{0, 1, 10, 0, 10, 8, 8, 10, 11, -1, -1, -1, -1, -1, -1, -1},
-{3, 1, 10, 11, 3, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 2, 11, 1, 11, 9, 9, 11, 8, -1, -1, -1, -1, -1, -1, -1},
-{3, 0, 9, 3, 9, 11, 1, 2, 9, 2, 11, 9, -1, -1, -1, -1},
-{0, 2, 11, 8, 0, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{3, 2, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{2, 3, 8, 2, 8, 10, 10, 8, 9, -1, -1, -1, -1, -1, -1, -1},
-{9, 10, 2, 0, 9, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{2, 3, 8, 2, 8, 10, 0, 1, 8, 1, 10, 8, -1, -1, -1, -1},
-{1, 10, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{1, 3, 8, 9, 1, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 9, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} };
+	// Add all the data required for each cube
+	// with a maximum of 5 triangles per cube
+	for (int i = 0; triTable[edgeTableIndex][i] != -1; i += 3) {
+		FVector Vert1 = vertList[triTable[edgeTableIndex][i]] * volumeScale;
+		FVector Vert2 = vertList[triTable[edgeTableIndex][i + 1]] * volumeScale;
+		FVector Vert3 = vertList[triTable[edgeTableIndex][i + 2]] * volumeScale;
 
+		FVector Normal = FVector::CrossProduct(Vert2 - Vert1, Vert3 - Vert1);
+
+		FColor Colour = FColor::Green;
+
+		Normal.Normalize();
+
+		MeshData.Vertices.Append({ Vert1, Vert2, Vert3 });
+
+		MeshData.Triangles.Append({ vertexCount + triangleOrder[0], vertexCount + triangleOrder[1], vertexCount + triangleOrder[2]});
+
+		MeshData.Normals.Append({ Normal, Normal, Normal });
+
+		MeshData.Colours.Append({ Colour, Colour, Colour });
+
+		vertexCount+= 3;
+	}
+
+}
+
+void AMarchingVolume::ApplyMesh() {
+
+	ThisMesh->CreateMeshSection(0, MeshData.Vertices, MeshData.Triangles, MeshData.Normals, MeshData.UVs, MeshData.Colours, TArray<FProcMeshTangent>(), true);
+}
+
+int AMarchingVolume::GetVoxelIndex(int X, int Y, int Z) {
+
+	return Z * (cubeSize + 1) * (cubeSize + 1) + Y * (cubeSize + 1) + X;;
+
+}
+
+float AMarchingVolume::InterpolateVerts(float vert1, float vert2)
+{
+	return (isoLevel - vert1) / (vert2 - vert1);
+}
